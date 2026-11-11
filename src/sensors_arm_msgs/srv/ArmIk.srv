@@ -1,0 +1,6 @@
+string arm_id
+float64[] xyzrpy
+---
+bool ok
+string message
+float64[] joints

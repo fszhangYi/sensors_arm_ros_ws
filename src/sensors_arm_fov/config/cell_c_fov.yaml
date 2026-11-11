@@ -1,0 +1,54 @@
+# Cell C 腕部 D405 视场采样（工具坐标系，mm）— 来自 sensors-arm default.yaml
+arm_id: arm-c
+camera_model: D405
+frame: "EFG-C65 工具系；X 开合，Y 侧向，Z 朝刀尖"
+tool_frame: gripper_centor_link
+optical_frame: wrist_cam_d405_optical_frame
+camera_info_topic: /cell_c/d405/color/camera_info
+image_topic: /cell_c/d405/color/image_raw
+units: mm
+lens: [0.045, 95.734, 123.294]
+look: [-0.000382, -0.812433, 0.583054]
+right: [1.000000, -0.000000, 0.000655]
+up: [-0.000532, 0.583054, 0.812433]
+modes:
+  - id: HD87
+    label: "1280×720 · 产品页 87×58"
+    width: 1280
+    height: 720
+    H_deg: 87.0
+    V_deg: 58.0
+  - id: HD84
+    label: "1280×720 · 手册 84×58"
+    width: 1280
+    height: 720
+    H_deg: 84.0
+    V_deg: 58.0
+  - id: VGA80
+    label: "640×480 · ~80×64"
+    width: 640
+    height: 480
+    H_deg: 80.0
+    V_deg: 64.0
+  - id: custom
+    label: "自定义（fx/fy）"
+    width: 1280
+    height: 720
+    fx: 650.0
+    fy: 650.0
+# 这些点 = 夹具/刀具上「希望相机能拍到」的关键位置（左右各一组）
+# Gazebo 里用彩色标记显示：进画面=合格，出画/被挡=该档位不够用
+samples:
+  - { name: root_L, xyz: [-12.0, -11.0, 117.0], tag: root, label_zh: "根部·左", role_zh: "指尖靠近夹爪的根部，常被挡住" }
+  - { name: root_R, xyz: [12.0, 11.0, 117.0], tag: root, label_zh: "根部·右", role_zh: "指尖靠近夹爪的根部，常被挡住" }
+  - { name: tip_L, xyz: [-12.0, -11.0, 192.0], tag: blade, label_zh: "前端·左", role_zh: "指尖最前面（最该拍到）" }
+  - { name: tip_R, xyz: [12.0, 11.0, 192.0], tag: blade, label_zh: "前端·右", role_zh: "指尖最前面（最该拍到）" }
+  - { name: hook_c_L, xyz: [-33.0, -11.0, 192.0], tag: hook_c, label_zh: "内侧·左", role_zh: "指尖靠里的侧边" }
+  - { name: hook_c_R, xyz: [33.0, 11.0, 192.0], tag: hook_c, label_zh: "内侧·右", role_zh: "指尖靠里的侧边" }
+  - { name: hook_o_L, xyz: [-65.0, -11.0, 192.0], tag: hook_o, label_zh: "外侧·左", role_zh: "相对法兰盘外缘，考验视场宽度" }
+  - { name: hook_o_R, xyz: [65.0, 11.0, 192.0], tag: hook_o, label_zh: "外侧·右", role_zh: "相对法兰盘外缘，考验视场宽度" }
+footprint_depths_mm: [90, 118, 120]
+notes: |
+  小球是相对法兰盘中心(gripper_centor)的检查点（不是障碍物，也不随指尖开合移动）：
+  绿=前端，蓝=内侧，黄=外侧，红方块=根部。
+  腕部相机应尽量把前端/内侧/外侧拍进画面；根部靠近夹爪，经常出画或被挡。

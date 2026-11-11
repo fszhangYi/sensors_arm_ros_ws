@@ -1,0 +1,19 @@
+# Mirrors sensors-arm configs/default.yaml arm list (ROS2 hw bridge)
+mode: hardware  # hardware | dry_run
+sensors_config: /home/ubuntu/autodl-tmp/sensors-arm/configs/sensors_multi.yaml
+arms:
+  - id: arm-a
+    label: "Cell A · EC616"
+    sensor_id: arm-a
+    write_sensor_id: arm-a
+    backend: elite
+  - id: arm-b
+    label: "Cell B · CS66"
+    sensor_id: arm-b
+    write_sensor_id: arm-b
+    backend: elite_cs
+  - id: arm-c
+    label: "Cell C · CS66 G26562"
+    sensor_id: arm-c
+    write_sensor_id: arm-c
+    backend: elite_cs

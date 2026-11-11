@@ -1,0 +1,5 @@
+string arm_id
+bool connect
+---
+bool ok
+string message

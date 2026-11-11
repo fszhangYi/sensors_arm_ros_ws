@@ -1,0 +1,5 @@
+sensors_arm_msgs/ArmCommand command
+---
+bool ok
+string message
+string status_json

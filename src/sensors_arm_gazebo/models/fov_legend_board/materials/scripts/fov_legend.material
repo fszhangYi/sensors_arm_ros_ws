@@ -1,0 +1,14 @@
+material FovLegend/Diffuse
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture fov_legend.png
+        filtering trilinear
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="CS66_cell_c">
+  <!-- Visual/TF description only; Gazebo camera added by sensors_arm_gazebo/cell_c_gazebo.urdf.xacro -->
+  <xacro:include filename="$(find sensors_arm_description)/urdf/cs66_cell_c_base_links.xacro"/>
+  <xacro:include filename="$(find sensors_arm_description)/urdf/d405_optical.xacro"/>
+  <xacro:d405_optical_frame parent="gripper_centor_link"/>
+</robot>

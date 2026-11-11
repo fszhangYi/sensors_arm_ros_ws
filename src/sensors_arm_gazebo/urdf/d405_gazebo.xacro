@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+<!-- Gazebo Classic camera approximating Intel RealSense D405 FOV modes. -->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+    Gazebo CameraSensor looks along +X (Y left, Z up).
+    ROS optical frame: +Z look, +X right, +Y down.
+    Child gazebo_link under optical with rpy=(0, -π/2, +π/2) maps
+    Gazebo +X→optical +Z, +Y→optical −X, +Z→optical −Y.
+  -->
+  <xacro:macro name="d405_gazebo_camera"
+    params="optical_link camera_namespace:=/cell_c/d405 width:=640 height:=360 hfov_deg:=87.0 update_rate:=5.0">
+    <xacro:property name="hfov_rad" value="${hfov_deg * 3.141592653589793 / 180.0}"/>
+    <!-- Inverse of the usual camera_link→optical (-π/2, 0, -π/2). -->
+    <xacro:property name="cam_pitch" value="${-1.5707963267948966}"/>
+    <xacro:property name="cam_yaw" value="${1.5707963267948966}"/>
+
+    <link name="wrist_cam_d405_gazebo_link">
+      <inertial>
+        <mass value="0.001"/>
+        <inertia ixx="1e-8" ixy="0" ixz="0" iyy="1e-8" iyz="0" izz="1e-8"/>
+      </inertial>
+    </link>
+    <joint name="wrist_cam_d405_gazebo_fixed" type="fixed">
+      <parent link="${optical_link}"/>
+      <child link="wrist_cam_d405_gazebo_link"/>
+      <origin xyz="0 0 0" rpy="0 ${cam_pitch} ${cam_yaw}"/>
+    </joint>
+
+    <gazebo reference="wrist_cam_d405_gazebo_link">
+      <sensor name="d405_color" type="camera">
+        <always_on>true</always_on>
+        <update_rate>${update_rate}</update_rate>
+        <!-- Plugin draws pale-red FOV frustum via ~/visual; built-in is green and doubles up. -->
+        <visualize>false</visualize>
+        <camera name="d405">
+          <horizontal_fov>${hfov_rad}</horizontal_fov>
+          <image>
+            <width>${width}</width>
+            <height>${height}</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <!-- 略近一点，避免夹爪根部被裁掉；指尖约在 0.08–0.19 m -->
+            <near>0.005</near>
+            <far>5.0</far>
+          </clip>
+        </camera>
+        <plugin name="d405_camera_controller" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>${camera_namespace}</namespace>
+          </ros>
+          <camera_name>color</camera_name>
+          <!-- CameraInfo / image TF stay in ROS optical frame -->
+          <frame_name>${optical_link}</frame_name>
+          <hack_baseline>0.0</hack_baseline>
+          <min_depth>0.01</min_depth>
+          <max_depth>5.0</max_depth>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <!--
+    FOV 检查点（不是障碍物）：标出夹具上希望被腕部相机拍到的位置。
+    半径宜小（默认 5mm），半透明，避免盖住真实指尖网格。
+    shape:=sphere|box  — 刀根用方块，其余用圆球。
+  -->
+  <!-- parent: attach to fingertip so markers track prismatic open (±X). -->
+  <xacro:macro name="fov_sample_marker"
+    params="name xyz_m parent:='gripper_centor_link' gazebo_material:='Gazebo/Red' radius:=0.0035 shape:=sphere
+            ambient:='1 0.15 0.1 0.55' diffuse:='1 0.2 0.1 0.55'">
+    <link name="fov_marker_${name}">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <xacro:if value="${shape == 'box'}">
+            <box size="${radius*1.6} ${radius*1.6} ${radius*1.6}"/>
+          </xacro:if>
+          <xacro:unless value="${shape == 'box'}">
+            <sphere radius="${radius}"/>
+          </xacro:unless>
+        </geometry>
+        <material name="fov_mat_${name}"><color rgba="${ambient}"/></material>
+      </visual>
+      <!-- 无碰撞：纯可视化，不影响物理/遮挡意图 -->
+      <inertial>
+        <mass value="1e-4"/>
+        <inertia ixx="1e-9" ixy="0" ixz="0" iyy="1e-9" iyz="0" izz="1e-9"/>
+      </inertial>
+    </link>
+    <joint name="fov_marker_${name}_fixed" type="fixed">
+      <parent link="${parent}"/>
+      <child link="fov_marker_${name}"/>
+      <origin xyz="${xyz_m}" rpy="0 0 0"/>
+    </joint>
+    <gazebo reference="fov_marker_${name}">
+      <visual>
+        <material>
+          <ambient>${ambient}</ambient>
+          <diffuse>${diffuse}</diffuse>
+          <specular>0.1 0.1 0.1 1</specular>
+          <emissive>0.05 0.05 0.05 1</emissive>
+        </material>
+      </visual>
+    </gazebo>
+  </xacro:macro>
+</robot>

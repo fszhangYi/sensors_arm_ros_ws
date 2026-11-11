@@ -1,0 +1,12 @@
+string name
+string tag
+float64[] xyz_mm
+float64 d_mm
+float64 az_deg
+float64 el_deg
+float64 u_px
+float64 v_px
+bool in_fov
+bool blocked
+float64 margin_h_deg
+float64 margin_v_deg

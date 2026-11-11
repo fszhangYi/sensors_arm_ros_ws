@@ -1,0 +1,13 @@
+string id
+string label
+uint32 width
+uint32 height
+float64 fx
+float64 fy
+float64 h_deg
+float64 v_deg
+uint32 in_count
+uint32 n
+bool all_in
+bool recommend
+float64 open_hook_h_margin_deg

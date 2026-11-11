@@ -1,0 +1,14 @@
+// DEPRECATED as primary art: Graphviz layout was too tangled.
+// Prefer: python3 docs/render_architecture.py  → architecture.png / .svg
+// This file kept only as a lightweight text sketch of layers.
+
+digraph {
+  graph [rankdir=TB, fontname="Noto Sans CJK SC", label="见 architecture.png（分层主图）"];
+  node [shape=box, fontname="Noto Sans CJK SC"];
+  "① 浏览器 :6008" -> "② sensors_arm_web\n(+ sensors-arm PAGE/assets)";
+  "② sensors_arm_web\n(+ sensors-arm PAGE/assets)" -> "③ rosbridge :9090";
+  "③ rosbridge :9090" -> "④ control / fov / hw";
+  "④ control / fov / hw" -> "⑤ Gazebo 或 真机";
+  "⑥ sensors-arm / hik-sensors" -> "② sensors_arm_web\n(+ sensors-arm PAGE/assets)" [style=dashed, label="复用 UI"];
+  "⑥ sensors-arm / hik-sensors" -> "④ control / fov / hw" [style=dashed, label="meshes / 驱动"];
+}

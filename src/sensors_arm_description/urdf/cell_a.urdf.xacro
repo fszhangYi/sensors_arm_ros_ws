@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="EC616">
+  <xacro:include filename="$(find sensors_arm_description)/urdf/ec616_base_links.xacro"/>
+</robot>

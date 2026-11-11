@@ -1,0 +1,13 @@
+build/
+install/
+log/
+fov_runs/
+home/
+**/__pycache__/
+*.pyc
+*.pyo
+.vscode/
+.idea/
+*.bag
+*.pcd
+symlink_install_manifest.txt

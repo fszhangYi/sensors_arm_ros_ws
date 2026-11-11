@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="cell_c_fov">
+    <!-- Kinematic puppet resets joint angles every step; zero-g avoids residual ODE drift. -->
+    <gravity>0 0 0</gravity>
+    <physics type="ode">
+      <!-- Coarser step / lower update: camera render dominates CPU under LLVMpipe. -->
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+    <scene>
+      <!-- Darker scene so wrist-cam markers/fingers are not washed out. -->
+      <ambient>0.35 0.35 0.38 1</ambient>
+      <background>0.22 0.24 0.28 1</background>
+      <shadows>false</shadows>
+    </scene>
+    <light name="sun" type="directional">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.75 0.75 0.78 1</diffuse>
+      <specular>0.15 0.15 0.15 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.8</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.3 0.2 -1</direction>
+    </light>
+    <light name="fill" type="directional">
+      <cast_shadows>false</cast_shadows>
+      <pose>1 1 2 0 0 0</pose>
+      <diffuse>0.28 0.28 0.3 1</diffuse>
+      <specular>0.02 0.02 0.02 1</specular>
+      <direction>0.2 -0.3 -0.8</direction>
+    </light>
+    <!-- Custom dark ground (keep name ground_plane). -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <ambient>0.18 0.19 0.21 1</ambient>
+            <diffuse>0.22 0.23 0.25 1</diffuse>
+            <specular>0.02 0.02 0.02 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <!-- Work table under cell_c home EE; yaw=pi/2 (横放), height=0.30 (2/3 of 0.45). -->
+    <include>
+      <uri>model://work_table</uri>
+      <name>work_table</name>
+      <pose>0.45 0.05 0.30 0 0 1.5708</pose>
+    </include>
+    <!-- cell_c is spawned by cell_c_gazebo.launch.py -->
+  </world>
+</sdf>

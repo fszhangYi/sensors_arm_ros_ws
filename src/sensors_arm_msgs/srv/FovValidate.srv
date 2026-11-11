@@ -1,0 +1,19 @@
+# Validate fingertip samples against Gazebo/CameraInfo projection (primary FOV path).
+string arm_id
+string mode_id
+# Optional overrides (empty = use YAML defaults)
+uint32 width
+uint32 height
+float64 fx
+float64 fy
+float64 h_deg
+float64 v_deg
+bool use_image_occlusion
+bool export_zip
+---
+bool ok
+string error
+string recommend_mode
+string result_json
+uint8[] zip_bytes
+string zip_filename

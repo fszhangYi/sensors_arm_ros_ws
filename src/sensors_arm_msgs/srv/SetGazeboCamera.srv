@@ -1,0 +1,20 @@
+# Apply web FOV camera mode (+ optional extrinsics) onto live Gazebo wrist camera.
+string arm_id
+string mode_id
+# 0 / empty => leave unchanged (intrinsics)
+uint32 width
+uint32 height
+float64 h_deg
+float64 v_deg
+float64 update_rate
+# Extrinsics in tool frame (gripper_centor): lens in meters; look/right/up unit axes.
+# Optical frame: X=right, Y=down(-up), Z=look.
+bool apply_extrinsics
+float64[3] lens_m
+float64[3] look
+float64[3] right
+float64[3] up
+---
+bool ok
+string error
+string applied_json

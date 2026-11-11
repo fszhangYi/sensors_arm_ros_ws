@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="CS66_cell_c">
+  <!-- Lower res/rate defaults: software-GL headless hosts cannot sustain 1280x720@15. -->
+  <xacro:arg name="camera_width" default="640"/>
+  <xacro:arg name="camera_height" default="360"/>
+  <xacro:arg name="camera_hfov_deg" default="87.0"/>
+  <xacro:arg name="camera_update_rate" default="5.0"/>
+  <xacro:arg name="camera_namespace" default="/cell_c/d405"/>
+
+  <xacro:include filename="$(find sensors_arm_description)/urdf/cs66_cell_c_base_links.xacro"/>
+
+  <!-- Pin base to world (kinematic puppet still needs a fixed root). -->
+  <link name="world"/>
+  <joint name="world_to_base_fixed" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Pure kinematic: latch /joint_states via SetPosition each physics step (no PID). -->
+  <gazebo>
+    <plugin name="sensors_arm_kinematic_joints" filename="libsensors_arm_kinematic_joints.so">
+      <ros>
+        <namespace>/</namespace>
+        <remapping>joint_states:=/joint_states</remapping>
+      </ros>
+      <joint_states_topic>joint_states</joint_states_topic>
+    </plugin>
+    <!-- Web FOV modes → runtime Gazebo camera HFOV / resolution. -->
+    <plugin name="sensors_arm_camera_params" filename="libsensors_arm_camera_params.so">
+      <ros>
+        <namespace>/</namespace>
+      </ros>
+      <sensor_name>d405_color</sensor_name>
+      <link_name>wrist_cam_d405_gazebo_link</link_name>
+      <optical_link_name>wrist_cam_d405_optical_frame</optical_link_name>
+      <parent_link_name>gripper_centor_link</parent_link_name>
+      <service_name>/fov/set_gazebo_camera</service_name>
+      <set_camera_info_service>/cell_c/d405/set_camera_info</set_camera_info_service>
+    </plugin>
+  </gazebo>
+
+  <xacro:include filename="$(find sensors_arm_description)/urdf/d405_optical.xacro"/>
+  <xacro:d405_optical_frame parent="gripper_centor_link"/>
+
+  <xacro:include filename="$(find sensors_arm_gazebo)/urdf/d405_gazebo.xacro"/>
+  <xacro:d405_gazebo_camera
+    optical_link="wrist_cam_d405_optical_frame"
+    camera_namespace="$(arg camera_namespace)"
+    width="$(arg camera_width)"
+    height="$(arg camera_height)"
+    hfov_deg="$(arg camera_hfov_deg)"
+    update_rate="$(arg camera_update_rate)"/>
+
+  <!-- Keep camera/tool links unlumped so web can move optical extrinsics at runtime. -->
+  <gazebo reference="gripper_centor_fixed">
+    <disableFixedJointLumping>true</disableFixedJointLumping>
+  </gazebo>
+  <gazebo reference="wrist_cam_d405_optical_fixed">
+    <disableFixedJointLumping>true</disableFixedJointLumping>
+  </gazebo>
+  <gazebo reference="wrist_cam_d405_gazebo_fixed">
+    <disableFixedJointLumping>true</disableFixedJointLumping>
+  </gazebo>
+
+  <!-- 检查点固定在法兰盘中心(gripper_centor_link)工具系；与指尖开合无关。 -->
+  <xacro:fov_sample_marker name="root_L" parent="gripper_centor_link" xyz_m="-0.012 -0.011 0.117" shape="box" radius="0.0045"
+    ambient="0.95 0.12 0.08 0.85" diffuse="1.0 0.18 0.1 0.85"/>
+  <xacro:fov_sample_marker name="root_R" parent="gripper_centor_link" xyz_m="0.012 0.011 0.117" shape="box" radius="0.0045"
+    ambient="0.95 0.12 0.08 0.85" diffuse="1.0 0.18 0.1 0.85"/>
+  <xacro:fov_sample_marker name="tip_L" parent="gripper_centor_link" xyz_m="-0.012 -0.011 0.192" radius="0.0045"
+    ambient="0.1 0.85 0.25 0.9" diffuse="0.15 1.0 0.3 0.9"/>
+  <xacro:fov_sample_marker name="tip_R" parent="gripper_centor_link" xyz_m="0.012 0.011 0.192" radius="0.0045"
+    ambient="0.1 0.85 0.25 0.9" diffuse="0.15 1.0 0.3 0.9"/>
+  <xacro:fov_sample_marker name="hook_c_L" parent="gripper_centor_link" xyz_m="-0.033 -0.011 0.192" radius="0.0045"
+    ambient="0.15 0.4 1.0 0.9" diffuse="0.2 0.5 1.0 0.9"/>
+  <xacro:fov_sample_marker name="hook_c_R" parent="gripper_centor_link" xyz_m="0.033 0.011 0.192" radius="0.0045"
+    ambient="0.15 0.4 1.0 0.9" diffuse="0.2 0.5 1.0 0.9"/>
+  <xacro:fov_sample_marker name="hook_o_L" parent="gripper_centor_link" xyz_m="-0.065 -0.011 0.192" radius="0.0045"
+    ambient="0.95 0.8 0.1 0.9" diffuse="1.0 0.9 0.15 0.9"/>
+  <xacro:fov_sample_marker name="hook_o_R" parent="gripper_centor_link" xyz_m="0.065 0.011 0.192" radius="0.0045"
+    ambient="0.95 0.8 0.1 0.9" diffuse="1.0 0.9 0.15 0.9"/>
+
+  <!-- 指尖用深色金属，避免贴在白背景上「消失」；检查点保持半透明小点 -->
+  <gazebo reference="gripper_fingertip_l_link">
+    <visual>
+      <material>
+        <ambient>0.22 0.24 0.28 1</ambient>
+        <diffuse>0.38 0.42 0.48 1</diffuse>
+        <specular>0.55 0.55 0.6 1</specular>
+        <emissive>0.02 0.02 0.025 1</emissive>
+      </material>
+    </visual>
+  </gazebo>
+  <gazebo reference="gripper_fingertip_r_link">
+    <visual>
+      <material>
+        <ambient>0.22 0.24 0.28 1</ambient>
+        <diffuse>0.38 0.42 0.48 1</diffuse>
+        <specular>0.55 0.55 0.6 1</specular>
+        <emissive>0.02 0.02 0.025 1</emissive>
+      </material>
+    </visual>
+  </gazebo>
+  <gazebo reference="gripper_centor_link">
+    <visual>
+      <material>
+        <ambient>0.12 0.12 0.14 1</ambient>
+        <diffuse>0.22 0.22 0.25 1</diffuse>
+        <specular>0.35 0.35 0.38 1</specular>
+      </material>
+    </visual>
+  </gazebo>
+  <gazebo reference="wrist_cam_bracket_link">
+    <visual>
+      <material>
+        <ambient>0.35 0.2 0.08 1</ambient>
+        <diffuse>0.55 0.32 0.12 1</diffuse>
+      </material>
+    </visual>
+  </gazebo>
+</robot>
