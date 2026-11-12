@@ -1,123 +1,136 @@
 # sensors_arm_ros_ws
 
-ROS 2 **Foxy** + Gazebo Classic 11 工作区：把 [sensors-arm](../sensors-arm) 多 Cell 可视化/控制迁到 ROS，Cell C 腕部 **D405 视场**以 Gazebo `CameraInfo` 投影为主验收路径。
+ROS 2 **Foxy** + Gazebo Classic 11 工作区：把 [sensors-arm](https://github.com/fszhangYi/sensors-arm) 的多 Cell 可视化 / 控制迁到 ROS，Cell C 腕部 **Intel RealSense D405** 视场以 Gazebo `CameraInfo` 投影为**主验收路径**。
 
-架构关系图（与 sensors-arm 的复用 / 替代）：[`docs/architecture.png`](docs/architecture.png) · [SVG](docs/architecture.svg) · [源 DOT](docs/architecture.dot)
+| | |
+|---|---|
+| **Stack** | ROS 2 Foxy · Gazebo 11 · rosbridge · FastAPI Web |
+| **Focus** | Cell C wrist-cam FOV · arm command / IK · hw bridge |
+| **UI** | http://127.0.0.1:6008/ → WebSocket rosbridge `:9090` |
+| **Drivers** | [hik-sensors](https://github.com/fszhangYi/sensors)（本仓只做桥，不 fork） |
 
 ---
 
-## 快速开始（推荐用脚本）
+## Architecture
 
-```bash
-cd ~/autodl-tmp/sensors_arm_ros_ws
+浏览器与仿真 / 真机之间，经 Web → rosbridge → ROS 分层；**命令以 service 为主，topic 回流状态与相机流**。
 
-# 首次 / 改代码后编译（必须用系统 Python 3.8，勿混 conda）
-./scripts/build.sh
+![分层架构](docs/architecture.png)
 
-# 仿真全家桶：Gazebo FOV + 控制 + rosbridge + Web UI
-./scripts/start_sim.sh
-# 浏览器打开 http://127.0.0.1:6008/
+| Layer | What |
+|-------|------|
+| ① Use | Browser `:6008` |
+| ② Web | `sensors_arm_web`（复用 sensors-arm PAGE / assets / YAML） |
+| ③ Bridge | rosbridge WebSocket `:9090` |
+| ④ ROS | control · fov · hw · description · gazebo · bringup · msgs |
+| ⑤ Exec | Gazebo（仿真）或真机 / dry-run |
+| ⑥ Shared | sensors-arm 产品仓 · hik-sensors 驱动 |
 
-# Gazebo + FOV 服务（默认无头；GUI=true 开 gzclient）
-./scripts/start_fov_sim.sh
-GUI=true ./scripts/start_fov_sim.sh
-
-# 真机 / dry-run（无 Gazebo）
-./scripts/start_hw.sh                  # 默认 dry_run:=true
-DRY_RUN=false ./scripts/start_hw.sh    # 实机
-
-# 只起 Web（依赖已有 ROS / rosbridge，或走离线 FOV）
-./scripts/start_web.sh
-
-# FOV 命令行
-./scripts/fov_cli.sh                   # 离线投影 HD87
-./scripts/fov_cli.sh --ros             # 调用 /fov/validate
-./scripts/fov_cli.sh --mode VGA80 --zip /tmp/fov.zip
-
-# 停掉本栈相关进程
-./scripts/stop.sh
+```text
+Browser ──HTTP──► sensors_arm_web(:6008)
+                      │
+                      │  rosbridge (ws://:9090)
+                      ▼
+              ┌── services ──────────────────────────┐
+              │  /fov/validate · /fov/set_gazebo_camera│
+              │  /arm/command · /arm/ik · /arm/connect │
+              └──────────────────────────────────────┘
+              ┌── topics (state / sensors) ───────────┐
+              │  /joint_states · CameraInfo · image_*  │
+              └──────────────────────────────────────┘
+                      │                    │
+                 Gazebo Cell C        hw_bridge → hik-sensors
 ```
 
-脚本一览：
+细节见 [`docs/architecture.md`](docs/architecture.md)。
 
-| 脚本 | 作用 |
-|------|------|
-| `scripts/env.sh` | `source`：Foxy + 本工作区环境（去 conda、设 `SENSORS_SRC`） |
-| `scripts/build.sh` | `colcon build --symlink-install` |
-| `scripts/start_sim.sh` | `multi_cell_sim` 全仿真 + Web `:6008` |
-| `scripts/start_fov_sim.sh` | Gazebo Cell C + FOV 节点（`GUI` 可选） |
-| `scripts/start_hw.sh` | 无 Gazebo 的 hw/control/FOV/web |
-| `scripts/start_web.sh` | 仅 Web UI |
-| `scripts/fov_cli.sh` | FOV CLI 封装 |
-| `scripts/stop.sh` | 结束 gzserver / bringup / rosbridge / web 等 |
+---
 
-环境变量（可选）：
+## Scripts（推荐入口）
 
-| 变量 | 默认 | 说明 |
-|------|------|------|
+![脚本选型](scripts/scripts_usage.png)
+
+```bash
+cd ~/autodl-tmp/sensors_arm_ros_ws   # or your clone path
+
+./scripts/build.sh                   # 首次 / 改代码后（系统 Python 3.8，勿混 conda）
+
+GUI=true ./scripts/start_fov_sim.sh  # 看 Gazebo 视场 / 调相机（常用）
+./scripts/start_sim.sh               # 全仿真 + Web UI :6008
+./scripts/start_hw.sh                # 真机 / dry-run（无 Gazebo）
+./scripts/start_web.sh               # 仅 Web（依赖已有 rosbridge 或离线 FOV）
+
+./scripts/fov_cli.sh                 # 离线投影 HD87
+./scripts/fov_cli.sh --ros           # 调用 /fov/validate
+./scripts/stop.sh                    # 停本栈
+```
+
+| Script | Role |
+|--------|------|
+| `env.sh` | 被其他脚本 `source`：Foxy + 本仓 install、去 conda、Gazebo 路径、`ROS_DOMAIN_ID=31` |
+| `build.sh` | `colcon build`（系统 Python 3.8） |
+| `start_fov_sim.sh` | Gazebo Cell C + `/fov/validate`；`GUI=true` 开 `gzclient` |
+| `start_sim.sh` | FOV Gazebo + arm_control + hw dry-run + rosbridge + Web `:6008` |
+| `start_hw.sh` | 无 Gazebo：hw / control / FOV + rosbridge + Web；默认 `DRY_RUN=true` |
+| `start_web.sh` | 只起 Web |
+| `fov_cli.sh` | FOV CLI（离线或 `--ros`） |
+| `stop.sh` | 结束 gz / bringup / rosbridge / web 等 |
+
+**选型：** 调 FOV → `start_fov_sim` · 浏览器控臂 → `start_sim` · 真机 → `start_hw` · 停栈 → `stop`。
+
+### Environment variables
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
 | `WEB_PORT` | `6008` | Web 端口 |
-| `START_WEB` | `true` | 是否随 launch 起 Web |
+| `START_WEB` | `true` | launch 是否起 Web |
 | `GUI` | `false` | 是否启动 Gazebo `gzclient` |
-| `DRY_RUN` | `true` | `start_hw.sh` 是否 dry-run |
+| `DRY_RUN` | `true` | `start_hw.sh` dry-run |
 | `ARM_ID` | `arm-c` | 默认工位 |
-| `ROS_LOCALHOST_ONLY` | `1`（经 `SENSORS_ARM_ROS_LOCALHOST_ONLY`） | 仅本机 DDS |
-| `ROS_DOMAIN_ID` | `31`（经 `SENSORS_ARM_ROS_DOMAIN_ID`） | 与本机其它 ROS2（如 Foxglove snap）隔离 |
+| `ROS_DOMAIN_ID` | `31`（`SENSORS_ARM_ROS_DOMAIN_ID`） | 与本机其它 ROS 2 隔离 |
+| `ROS_LOCALHOST_ONLY` | `0`（`SENSORS_ARM_ROS_LOCALHOST_ONLY`） | 仅本机 DDS（Gazebo 插件对 `1` 可能不友好） |
 | `SENSORS_SRC` | `~/autodl-tmp/sensors/src` | hik-sensors 源码路径 |
 
 ---
 
-## 包一览
+## Packages
 
 | Package | Role |
 |---------|------|
-| `sensors_arm_description` | EC616 / CS66 / Cell C xacro + D405 optical + 网格 symlink |
-| `sensors_arm_gazebo` | Cell C world、`gazebo_ros_camera`、无头 launch |
-| `sensors_arm_msgs` | `FovValidate` / `ArmCommand` / `ArmConnect` / `ArmIk` |
-| `sensors_arm_fov` | 视场校验节点 + CLI + 几何对照脚本 |
-| `sensors_arm_control` | Sim 关节、abs ramp、IK |
+| `sensors_arm_description` | EC616 / CS66 / Cell C xacro · D405 optical · 网格 symlink |
+| `sensors_arm_gazebo` | Cell C world · camera plugin · frustum viz · 无头 launch |
+| `sensors_arm_msgs` | `FovValidate` · `SetGazeboCamera` · `ArmCommand` · `ArmConnect` · `ArmIk` |
+| `sensors_arm_fov` | 视场校验节点 · CLI · 几何对照 |
+| `sensors_arm_control` | Sim 关节 · abs ramp · IK |
 | `sensors_arm_hw` | hik-sensors 桥（dry_run / hardware） |
-| `sensors_arm_web` | 同等 Three.js UI（默认 **6008**）→ rosbridge/ROS |
+| `sensors_arm_web` | Three.js UI（`:6008`）→ rosbridge |
 | `sensors_arm_bringup` | 一键 launch |
 
 ---
 
-## 常用命令（手工）
+## Manual commands
 
-### 环境
+### Environment
 
 ```bash
-# 重要：Foxy 用系统 Python 3.8，不要用 conda
-export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:$HOME/.local/bin"
-source /opt/ros/foxy/setup.bash
-source ~/autodl-tmp/sensors_arm_ros_ws/install/setup.bash
-# 或：
+# Foxy 必须用系统 Python 3.8，不要用 conda
 source ~/autodl-tmp/sensors_arm_ros_ws/scripts/env.sh
 ```
 
-### 编译
+### Build
 
 ```bash
-cd ~/autodl-tmp/sensors_arm_ros_ws
+./scripts/build.sh
+# or:
 colcon build --symlink-install --cmake-args -DPYTHON_EXECUTABLE=/usr/bin/python3
-# 等价：./scripts/build.sh
 ```
 
 ### Launch
 
 ```bash
-# Gazebo + FOV（默认无头）
-ros2 launch sensors_arm_bringup cell_c_gazebo_fov.launch.py
 ros2 launch sensors_arm_bringup cell_c_gazebo_fov.launch.py gui:=true
-
-# 全仿真 + rosbridge + Web :6008
 ros2 launch sensors_arm_bringup multi_cell_sim.launch.py
-ros2 launch sensors_arm_bringup multi_cell_sim.launch.py start_web:=false
-ros2 launch sensors_arm_bringup multi_cell_sim.launch.py web_port:=6010
-ros2 launch sensors_arm_bringup multi_cell_sim.launch.py gui:=true
-
-# 真机 / dry-run（无 Gazebo）
 ros2 launch sensors_arm_bringup hardware.launch.py dry_run:=true
-ros2 launch sensors_arm_bringup hardware.launch.py dry_run:=false arm_id:=arm-c
 ```
 
 ### FOV
@@ -125,58 +138,59 @@ ros2 launch sensors_arm_bringup hardware.launch.py dry_run:=false arm_id:=arm-c
 ```bash
 CFG=$(ros2 pkg prefix sensors_arm_fov)/share/sensors_arm_fov/config/cell_c_fov.yaml
 
-# 离线投影（不依赖 Gazebo）
-ros2 run sensors_arm_fov fov_cli -c "$CFG" --mode HD87
-
-# 走 ROS 服务（需先 start_fov_sim / start_sim）
-ros2 run sensors_arm_fov fov_cli -c "$CFG" --mode HD87 --ros
+ros2 run sensors_arm_fov fov_cli -c "$CFG" --mode HD87          # offline
+ros2 run sensors_arm_fov fov_cli -c "$CFG" --mode HD87 --ros    # needs sim
 ros2 run sensors_arm_fov fov_cli -c "$CFG" --mode HD87 --ros --zip /tmp/fov.zip
 
-# 话题 / 服务速查
 ros2 topic list | grep -E 'd405|joint_states|clock'
 ros2 service list | grep fov
 ```
 
-### 控制（sim）
+### Control (sim)
 
-`./scripts/start_sim.sh` 下 Web / `/arm/command` 改 `/joint_states`；Gazebo 用运动学插件每步 `SetPosition` 跟随（无动力学 PID）。
+`start_sim.sh` 下 Web / `/arm/command` 改 `/joint_states`；Gazebo 用运动学插件每步 `SetPosition` 跟随（无动力学 PID）。
 
 ```bash
-# 需已有 arm_control_node（start_sim 会起）
 ros2 service call /arm/command sensors_arm_msgs/srv/ArmCommand \
   "{command: {arm_id: 'arm-c', action: 'connect', joints: [], jog_delta: [], speed_scale: 1.0, cancel_abs_ramp: false}}"
 
 ros2 service call /arm/command sensors_arm_msgs/srv/ArmCommand \
   "{command: {arm_id: 'arm-c', action: 'home', joints: [], jog_delta: [], speed_scale: 1.0, cancel_abs_ramp: false}}"
-
-ros2 service call /arm/command sensors_arm_msgs/srv/ArmCommand \
-  "{command: {arm_id: 'arm-c', action: 'jog', joints: [], jog_delta: [0.1, 0, 0, 0, 0, 0, 0], speed_scale: 1.0, cancel_abs_ramp: false}}"
 ```
 
-### 仅 Web
+### Web only
 
 ```bash
-# 先 source 工作区，再用 venv 的 FastAPI
-source ~/autodl-tmp/sensors_arm_ros_ws/scripts/env.sh
+./scripts/start_web.sh
+# or:
+source ./scripts/env.sh
 ~/autodl-tmp/.venv/bin/python -m sensors_arm_web.web_server --port 6008 --mode sim
-# 等价：./scripts/start_web.sh
 ```
 
-### 描述 / 调试
+### Description / debug
 
 ```bash
-# 展开 Cell C URDF
 xacro $(ros2 pkg prefix sensors_arm_description)/share/sensors_arm_description/urdf/cell_c.urdf.xacro > /tmp/cell_c.urdf
-
-# 仅 RSP 显示（无 Gazebo）
 ros2 launch sensors_arm_description display.launch.py
 ```
 
 ---
 
-## 注意
+## Related repositories
+
+| Repo | Role |
+|------|------|
+| [sensors](https://github.com/fszhangYi/sensors) | hik-sensors 核心驱动（唯一归属） |
+| [sensors-arm](https://github.com/fszhangYi/sensors-arm) | 非 ROS 多臂 UI / 配置 / 网格（本仓复用） |
+| **sensors_arm_ros_ws**（本仓） | ROS 2 + Gazebo 迁移与 FOV 主验收 |
+
+布局约定：工作区旁放置 `sensors` 与 `sensors-arm`；`description` 网格多为指向 `sensors-arm/.../meshes` 的 **symlink**。
+
+---
+
+## Notes
 
 - ROS 节点跑 **Python 3.8 + Foxy**；`colcon build` 不要带 conda。
-- Web（FastAPI）用 `~/autodl-tmp/.venv`（通常是 3.12），经 rosbridge 连 ROS。
-- 网格是指向 `sensors-arm/.../meshes` 的 **symlink**。
-- 产品视场路径是 CameraInfo 投影；几何 `fov.analyze` 仅对照，见 `src/sensors_arm_fov/scripts/compare_geom_vs_sim.py`。
+- Web（FastAPI）可用独立 venv（如 3.12），经 rosbridge 连 ROS。
+- 产品视场路径是 **CameraInfo 投影**；几何 `fov.analyze` 仅对照，见 `src/sensors_arm_fov/scripts/compare_geom_vs_sim.py`。
+- 默认 `ROS_DOMAIN_ID=31`，避免与本机其它 ROS 2（如 Foxglove snap）串扰。
