@@ -19,7 +19,32 @@ from sensor_msgs.msg import JointState
 
 from sensors_arm_msgs.srv import ArmCommand, ArmConnect
 
-SENSORS_SRC = os.environ.get("SENSORS_SRC", "/home/ubuntu/autodl-tmp/sensors/src")
+
+def _default_sensors_src() -> str:
+    env = (os.environ.get("SENSORS_SRC") or "").strip()
+    if env:
+        return env
+    ws = (os.environ.get("SENSORS_ARM_ROS_WS") or "").strip()
+    if ws:
+        cand = os.path.join(ws, "sensors", "src")
+        if os.path.isdir(cand):
+            return cand
+    return os.path.join(os.path.expanduser("~"), "autodl-tmp", "sensors", "src")
+
+
+def _default_sensors_arm_root() -> str:
+    env = (os.environ.get("SENSORS_ARM_ROOT") or "").strip()
+    if env and os.path.isdir(env):
+        return env
+    ws = (os.environ.get("SENSORS_ARM_ROS_WS") or "").strip()
+    if ws:
+        cand = os.path.join(ws, "sensors-arm")
+        if os.path.isdir(cand):
+            return cand
+    return os.path.join(os.path.expanduser("~"), "autodl-tmp", "sensors-arm")
+
+
+SENSORS_SRC = _default_sensors_src()
 if SENSORS_SRC not in sys.path:
     sys.path.insert(0, SENSORS_SRC)
 
@@ -77,10 +102,11 @@ class HwBridgeNode(Node):
     def _ensure_manager(self) -> None:
         if self._manager is not None:
             return
-        sensors_cfg = (
-            self._cfg.get("sensors_config")
-            or "/home/ubuntu/autodl-tmp/sensors-arm/configs/sensors_multi.yaml"
-        )
+        sensors_cfg = str(self._cfg.get("sensors_config") or "").strip()
+        if not sensors_cfg:
+            sensors_cfg = os.path.join(
+                _default_sensors_arm_root(), "configs", "sensors_multi.yaml"
+            )
         from sensors.runtime.manager import SensorManager  # type: ignore
         dry = self._dry or (str(self._cfg.get("mode") or "").lower() == "dry_run")
         self._manager = SensorManager.from_yaml(sensors_cfg, dry_run=dry)

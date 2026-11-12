@@ -11,7 +11,15 @@ import numpy as np
 
 
 def _ensure_sensors_path() -> None:
-    sensors_src = os.environ.get("SENSORS_SRC", "/home/ubuntu/autodl-tmp/sensors/src")
+    sensors_src = (os.environ.get("SENSORS_SRC") or "").strip()
+    if not sensors_src:
+        ws = (os.environ.get("SENSORS_ARM_ROS_WS") or "").strip()
+        if ws:
+            cand = os.path.join(ws, "sensors", "src")
+            if os.path.isdir(cand):
+                sensors_src = cand
+    if not sensors_src:
+        sensors_src = os.path.join(os.path.expanduser("~"), "autodl-tmp", "sensors", "src")
     if sensors_src not in sys.path:
         sys.path.insert(0, sensors_src)
 

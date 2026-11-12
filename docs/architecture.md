@@ -25,3 +25,11 @@ python3 render_architecture.py
 - **sensors-arm**：原非 ROS 产品；提供 UI、配置、网格。
 - **本仓**：同 UI 迁到 ROS + Gazebo；控制与 FOV 走 ROS；FOV 主验收 = Gazebo `CameraInfo`。
 - **hik-sensors**：驱动唯一归属；本仓 `hw` 只做桥，不 fork 驱动。
+
+依赖接入与 apps 一致，走**仓库根软链**（`scripts/link_deps.sh`）：
+
+```text
+sensors_arm_ros_ws/
+  sensors      → ../sensors        # SENSORS_SRC = ./sensors/src
+  sensors-arm  → ../sensors-arm    # SENSORS_ARM_ROOT；PAGE / assets / YAML / meshes
+```

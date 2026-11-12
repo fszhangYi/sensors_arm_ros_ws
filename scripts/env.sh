@@ -16,7 +16,11 @@ fi
 
 _WS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export SENSORS_ARM_ROS_WS="${SENSORS_ARM_ROS_WS:-${_WS_ROOT}}"
-export SENSORS_SRC="${SENSORS_SRC:-${HOME}/autodl-tmp/sensors/src}"
+
+# Sibling deps via repo-root symlinks (same layout as sensors-view → ./sensors).
+"${SENSORS_ARM_ROS_WS}/scripts/link_deps.sh" >/dev/null || true
+export SENSORS_ARM_ROOT="${SENSORS_ARM_ROOT:-${SENSORS_ARM_ROS_WS}/sensors-arm}"
+export SENSORS_SRC="${SENSORS_SRC:-${SENSORS_ARM_ROS_WS}/sensors/src}"
 
 # Isolate this stack from other ROS 2 processes via domain id (e.g. snap
 # foxglove_bridge on Jazzy / domain 0). Keep LOCALHOST_ONLY off by default:

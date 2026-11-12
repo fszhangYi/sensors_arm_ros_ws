@@ -1,8 +1,9 @@
 host: 0.0.0.0
 port: 6008
 rosbridge_url: ws://127.0.0.1:9090
-sensors_arm_root: /home/ubuntu/autodl-tmp/sensors-arm
-default_yaml: /home/ubuntu/autodl-tmp/sensors-arm/configs/default.yaml
-models_catalog: /home/ubuntu/autodl-tmp/sensors-arm/configs/models_catalog.yaml
+# Resolved via SENSORS_ARM_ROOT / repo-root symlink ./sensors-arm (see scripts/link_deps.sh)
+sensors_arm_root: ""
+default_yaml: ""
+models_catalog: ""
 fov_yaml: ""  # filled from sensors_arm_fov share when empty
 mode: sim

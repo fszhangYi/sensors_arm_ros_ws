@@ -11,6 +11,24 @@ import uvicorn
 import yaml
 
 
+def _default_sensors_arm_root() -> str:
+    """Prefer SENSORS_ARM_ROOT / <ws>/sensors-arm symlink (scripts/link_deps.sh)."""
+    env = (os.environ.get("SENSORS_ARM_ROOT") or "").strip()
+    if env and os.path.isdir(env):
+        return env
+    ws = (os.environ.get("SENSORS_ARM_ROS_WS") or "").strip()
+    if ws:
+        cand = os.path.join(ws, "sensors-arm")
+        if os.path.isdir(cand):
+            return cand
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        cand = parent / "sensors-arm"
+        if (cand / "src" / "sensors_arm").is_dir() or (cand / "configs").is_dir():
+            return str(cand)
+    return str(Path.home() / "autodl-tmp" / "sensors-arm")
+
+
 def _resolve_fov_yaml(explicit: str) -> str:
     if explicit and os.path.isfile(explicit):
         return explicit
@@ -59,9 +77,13 @@ def main(argv=None) -> None:
     port = int(args.port or cfg.get("port") or 6008)
     rosbridge = args.rosbridge or cfg.get("rosbridge_url") or "ws://127.0.0.1:9090"
     mode = args.mode or cfg.get("mode") or "sim"
-    sensors_arm_root = cfg.get("sensors_arm_root") or "/home/ubuntu/autodl-tmp/sensors-arm"
-    default_yaml = cfg.get("default_yaml") or os.path.join(sensors_arm_root, "configs/default.yaml")
-    models_catalog = cfg.get("models_catalog") or os.path.join(sensors_arm_root, "configs/models_catalog.yaml")
+    sensors_arm_root = (cfg.get("sensors_arm_root") or "").strip() or _default_sensors_arm_root()
+    default_yaml = (cfg.get("default_yaml") or "").strip() or os.path.join(
+        sensors_arm_root, "configs/default.yaml"
+    )
+    models_catalog = (cfg.get("models_catalog") or "").strip() or os.path.join(
+        sensors_arm_root, "configs/models_catalog.yaml"
+    )
     fov_yaml = _resolve_fov_yaml(cfg.get("fov_yaml") or "")
 
     # Prefer workspace venv uvicorn/fastapi when available
@@ -78,7 +100,9 @@ def main(argv=None) -> None:
     orch.start()
     app = create_app(orch, sensors_arm_root=sensors_arm_root)
     print(
-        "[sensors_arm_web] http://{}:{} rosbridge={} fov={}".format(host, port, rosbridge, fov_yaml),
+        "[sensors_arm_web] http://{}:{} rosbridge={} sensors-arm={} fov={}".format(
+            host, port, rosbridge, sensors_arm_root, fov_yaml
+        ),
         flush=True,
     )
     try:

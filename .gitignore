@@ -11,3 +11,7 @@ home/
 *.bag
 *.pcd
 symlink_install_manifest.txt
+
+# Sibling product/core repos (wired by scripts/link_deps.sh; do not commit)
+/sensors
+/sensors-arm

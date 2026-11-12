@@ -67,7 +67,8 @@ GUI=true ./scripts/start_fov_sim.sh  # 看 Gazebo 视场 / 调相机（常用）
 
 | Script | Role |
 |--------|------|
-| `env.sh` | 被其他脚本 `source`：Foxy + 本仓 install、去 conda、Gazebo 路径、`ROS_DOMAIN_ID=31` |
+| `env.sh` | 被其他脚本 `source`：Foxy + 本仓 install、去 conda、Gazebo 路径、`ROS_DOMAIN_ID=31`；并确保依赖软链 |
+| `link_deps.sh` | 根目录 `./sensors` → `../sensors`，`./sensors-arm` → `../sensors-arm` |
 | `build.sh` | `colcon build`（系统 Python 3.8） |
 | `start_fov_sim.sh` | Gazebo Cell C + `/fov/validate`；`GUI=true` 开 `gzclient` |
 | `start_sim.sh` | FOV Gazebo + arm_control + hw dry-run + rosbridge + Web `:6008` |
@@ -89,7 +90,8 @@ GUI=true ./scripts/start_fov_sim.sh  # 看 Gazebo 视场 / 调相机（常用）
 | `ARM_ID` | `arm-c` | 默认工位 |
 | `ROS_DOMAIN_ID` | `31`（`SENSORS_ARM_ROS_DOMAIN_ID`） | 与本机其它 ROS 2 隔离 |
 | `ROS_LOCALHOST_ONLY` | `0`（`SENSORS_ARM_ROS_LOCALHOST_ONLY`） | 仅本机 DDS（Gazebo 插件对 `1` 可能不友好） |
-| `SENSORS_SRC` | `~/autodl-tmp/sensors/src` | hik-sensors 源码路径 |
+| `SENSORS_SRC` | `<ws>/sensors/src` | hik-sensors（经根目录 `./sensors` 软链） |
+| `SENSORS_ARM_ROOT` | `<ws>/sensors-arm` | 产品仓 UI/配置/网格（经 `./sensors-arm` 软链） |
 
 ---
 
@@ -184,7 +186,16 @@ ros2 launch sensors_arm_description display.launch.py
 | [sensors-arm](https://github.com/fszhangYi/sensors-arm) | 非 ROS 多臂 UI / 配置 / 网格（本仓复用） |
 | **sensors_arm_ros_ws**（本仓） | ROS 2 + Gazebo 迁移与 FOV 主验收 |
 
-布局约定：工作区旁放置 `sensors` 与 `sensors-arm`；`description` 网格多为指向 `sensors-arm/.../meshes` 的 **symlink**。
+布局约定（与 sensors-view / sensors-dcs 相同）：
+
+```bash
+# 旁路克隆后，在本仓根目录挂软链（env.sh / link_deps.sh 会自动做）
+./scripts/link_deps.sh
+# → ./sensors     → ../sensors
+# → ./sensors-arm → ../sensors-arm
+```
+
+Web / hw / IK 默认走 `SENSORS_ARM_ROOT` 与 `SENSORS_SRC`；`description` 网格经 `./sensors-arm` 相对软链引用，**不要**把目标仓提交进本仓。
 
 ---
 

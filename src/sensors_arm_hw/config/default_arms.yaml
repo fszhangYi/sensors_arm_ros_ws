@@ -1,6 +1,7 @@
 # Mirrors sensors-arm configs/default.yaml arm list (ROS2 hw bridge)
 mode: hardware  # hardware | dry_run
-sensors_config: /home/ubuntu/autodl-tmp/sensors-arm/configs/sensors_multi.yaml
+# Empty → hw_bridge resolves via SENSORS_ARM_ROOT/configs/sensors_multi.yaml
+sensors_config: ""
 arms:
   - id: arm-a
     label: "Cell A · EC616"
